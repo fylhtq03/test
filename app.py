@@ -1,11 +1,11 @@
 from flask import Flask, render_template, request
 from yookassa import Configuration, Payment
+import uuid
 import requests
 
 podpislon_api_key = 'your_api_key'
 Configuration.account_id = 'shop_id'
-Configuration.secret_key = 'secret_key'
-Configuration.timeout = 60
+Configuration.secret_key = 'Секретный ключ'
 
 app = Flask(__name__)
 
@@ -26,7 +26,7 @@ def data_input():
     print(last_name)
     print(number)
     #podpislon_create_doc_send()
-    Payment_create()
+    Pay_create()
     return render_template('index.html')
 
 def podpislon_create_doc_send():
@@ -57,23 +57,36 @@ def podpislon_create_doc_send():
     response = requests.put('https://podpislon.ru/integration/add-document', headers=headers, json=json_data)
     print(response)
 
-def Payment_create():
-    # Создание объекта Payment
-    payment = Payment.create({
+def Pay_create():
+    idempotence_key = str(uuid.uuid4())
+    print("idempotence_key:" + idempotence_key)
+    payment_data = {
+        "id": idempotence_key,
+        "status": "pending",
+        "paid": "false",
         "amount": {
-            "value": "10.00",
+            "value": "100.00",
             "currency": "RUB"
         },
         "confirmation": {
             "type": "redirect",
-            "return_url": "http://127.0.0.1:5000"
+            "confirmation_url": "https://yoomoney.ru/api-pages/v2/payment-confirm/epl?orderId=23d93cac-000f-5000-8000-126628f15141"
         },
-        "description": "Оплата услуги"
-    })
+        "created_at": "2024-04-06T14:30:45.129Z",
+        "description": "Заказ №1",
+        "metadata": {},
+        "recipient": {
+            "account_id": Configuration.account_id,
+            "gateway_id": "100700"
+        },
+        "refundable": "false",
+        "test": "false"
+    }
 
-    # Получение ссылки на оплату
-    payment_url = payment.confirmation.confirmation_url
-    print(payment_url)
+    payment = Payment.create(payment_data)
+
+    # get confirmation url
+    confirmation_url = payment.confirmation.confirmation_url
 
 
 if __name__ == '__main__':
